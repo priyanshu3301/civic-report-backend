@@ -60,4 +60,58 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// @route   PUT api/reports/:id
+// @desc    Update a report
+// @access  Private
+router.put('/:id', protect, async (req, res) => {
+  const { title, description } = req.body;
+
+  try {
+    let report = await Report.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({ msg: 'Report not found' });
+    }
+
+    // Check if the user owns the report
+    if (report.user.toString() !== req.user.id) {
+      return res.status(401).json({ msg: 'User not authorized' });
+    }
+
+    report.title = title || report.title;
+    report.description = description || report.description;
+
+    const updatedReport = await report.save();
+    res.json(updatedReport);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   DELETE api/reports/:id
+// @desc    Delete a report
+// @access  Private
+router.delete('/:id', protect, async (req, res) => {
+  try {
+    let report = await Report.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({ msg: 'Report not found' });
+    }
+
+    // Check if the user owns the report
+    if (report.user.toString() !== req.user.id) {
+      return res.status(401).json({ msg: 'User not authorized' });
+    }
+
+    await report.deleteOne(); // Mongoose v6+ uses deleteOne()
+
+    res.json({ msg: 'Report removed' });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send('Server Error');
+  }
+});
+
 export default router;
