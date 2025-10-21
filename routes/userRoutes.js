@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { protect } from '../middleware/authMiddleware.js'; // <-- ADD THIS LINE
 
 const router = express.Router();
 
@@ -93,6 +94,14 @@ router.post('/login', async (req, res) => {
     console.error(err.message);
     res.status(500).send('Server error');
   }
+});
+
+// @route   GET api/users/profile
+// @desc    Get user profile
+// @access  Private
+router.get('/profile', protect, async (req, res) => {
+  // The user object is attached to the request in the 'protect' middleware
+  res.json(req.user); 
 });
 
 export default router;
