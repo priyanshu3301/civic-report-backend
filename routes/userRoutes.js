@@ -2,7 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-import { protect } from '../middleware/authMiddleware.js'; // <-- ADD THIS LINE
+import { protect, admin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -102,6 +102,13 @@ router.post('/login', async (req, res) => {
 router.get('/profile', protect, async (req, res) => {
   // The user object is attached to the request in the 'protect' middleware
   res.json(req.user); 
+});
+
+// @route   GET api/users/admin-test
+// @desc    A test route for admin middleware
+// @access  Private/Admin
+router.get('/admin-test', protect, admin, (req, res) => {
+  res.json({ msg: 'Admin content successfully accessed' });
 });
 
 export default router;
