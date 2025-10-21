@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import userRoutes from './routes/userRoutes.js';
+import reportRoutes from './routes/reportRoutes.js'
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.get('/', (req, res) => {
 
 // Use the user routes
 app.use('/api/users', userRoutes);
+app.use('/api/reports', reportRoutes);
 
 const PORT = process.env.PORT || 5001;
 
