@@ -104,7 +104,7 @@ const reportSchema = new mongoose.Schema(
         updatedBy: {
           type: mongoose.Schema.Types.ObjectId,
           ref: 'User',
-          default: null, // Can be null if updated by system
+          default: null,
         },
         timestamp: {
           type: Date,
@@ -113,13 +113,13 @@ const reportSchema = new mongoose.Schema(
       },
     ],
 
+    // --- Rejection Reason ---
     rejectionReason: {
       type: String,
       trim: true,
       maxlength: [500, 'Rejection reason cannot exceed 500 characters'],
       validate: {
         validator: function (v) {
-          // Only allow rejectionReason if status is rejected
           if (v && this.status !== 'rejected') return false;
           return true;
         },
@@ -156,5 +156,59 @@ reportSchema.virtual('coordinateArray').get(function () {
   return this.location?.coordinates || [];
 });
 
-// --- Export ---
+// --- Pre-save hook to track status changes and rejectionReason ---
+reportSchema.pre('save', function (next) {
+  const updatedBy = this._updatingUser || null;
+
+  if (this.isNew) {
+    // Initial history entry
+    this.history.push({
+      status: this.status,
+      notes: 'Report created',
+      updatedBy,
+    });
+
+    if (this.status === 'rejected' && this.rejectionReason) {
+      this.history.push({
+        status: 'rejected',
+        notes: `Rejection reason: ${this.rejectionReason}`,
+        updatedBy,
+      });
+    }
+  } else {
+    // Status change tracking
+    if (this.isModified('status')) {
+      this.history.push({
+        status: this.status,
+        notes: `Status changed to ${this.status}`,
+        updatedBy,
+      });
+
+      if (this.status === 'rejected' && this.rejectionReason) {
+        this.history.push({
+          status: 'rejected',
+          notes: `Rejection reason: ${this.rejectionReason}`,
+          updatedBy,
+        });
+      }
+    }
+
+    // Rejection reason updated independently
+    if (this.isModified('rejectionReason') && this.status === 'rejected') {
+      this.history.push({
+        status: 'rejected',
+        notes: `Rejection reason updated: ${this.rejectionReason}`,
+        updatedBy,
+      });
+    }
+  }
+
+  next();
+});
+
+// --- Method to set the user performing update ---
+reportSchema.methods.setUpdatingUser = function (userId) {
+  this._updatingUser = userId;
+};
+
 export default mongoose.model('Report', reportSchema);
