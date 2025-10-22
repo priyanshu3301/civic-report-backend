@@ -1,71 +1,230 @@
 import mongoose from 'mongoose';
 
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, 'Name is required'],
-    trim: true,
-    maxlength: [100, 'Name cannot exceed 100 characters']
+// --- Constants for reuse ---
+const STATUS_ENUM = ["reported", "acknowledged", "in_progress", "resolved", "closed", "rejected"];
+const CATEGORY_ENUM = [
+  'sanitation',
+  'public_works',
+  'transportation',
+  'parks_recreation',
+  'water_sewer',
+  'other',
+];
+const MEDIA_TYPE_ENUM = ['image', 'video', 'audio'];
+const SEVERITY_ENUM = ['low', 'medium', 'high', 'critical'];
+
+const reportSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: [true, 'Title is required'],
+      trim: true,
+      maxlength: [100, 'Title cannot exceed 100 characters'],
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Description cannot exceed 500 characters'],
+    },
+    status: {
+      type: String,
+      enum: STATUS_ENUM,
+      default: 'reported',
+    },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: false,
+    },
+    category: {
+      type: String,
+      enum: CATEGORY_ENUM,
+      required: [true, 'Category is required'],
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point',
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true,
+        validate: {
+          validator: function (v) {
+            return v.length === 2 && v[0] >= -180 && v[0] <= 180 && v[1] >= -90 && v[1] <= 90;
+          },
+          message: 'Coordinates must be [longitude, latitude] with valid ranges',
+        },
+      },
+      name: {
+        type: String,
+        required: [true, 'Location name is required'],
+        trim: true,
+        maxlength: [200, 'Location name cannot exceed 200 characters'],
+      },
+    },
+    media: [
+      {
+        type: {
+          type: String,
+          enum: MEDIA_TYPE_ENUM,
+          required: true,
+        },
+        url: {
+          type: String,
+          required: true,
+        },
+      },
+    ],
+    severity: {
+      type: String,
+      enum: SEVERITY_ENUM,
+      required: [true, 'Severity is required'],
+    },
+    history: [
+      {
+        status: {
+          type: String,
+          enum: STATUS_ENUM,
+          required: true,
+        },
+        notes: {
+          type: String,
+          trim: true,
+          maxlength: [500, 'History notes cannot exceed 500 characters'],
+        },
+        updatedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          default: null,
+        },
+        timestamp: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    rejectionReason: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Rejection reason cannot exceed 500 characters'],
+      validate: {
+        validator: function (v) {
+          if (v && this.status !== 'rejected') return false;
+          return true;
+        },
+        message: 'Rejection reason can only be set if status is "rejected"',
+      },
+    },
+    upvotes: {
+      type: Number,
+      default: 0,
+    },
+    upvotedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
   },
-  email: {
-    type: String,
-    required: [true, 'Email is required'],
-    unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please provide a valid email']
-  },
-  password: {
-    type: String,
-    required: function() { return !this.googleId; },
-    minlength: [8, 'Password must be at least 8 characters long']
-  },
-  googleId: {
-    type: String,
-    default: undefined, // Changed from null to undefined for sparse unique index
-    unique: true,
-    sparse: true
-  },
-  provider: {
-    type: String,
-    enum: ['local', 'google'],
-    default: 'local'
-  },
-  isVerified: {
-    type: Boolean,
-    default: false
-  },
-  verificationToken: {
-    type: String,
-    default: null
-  },
-  verificationTokenExpires: {
-    type: Date,
-    default: null
-  },
-  passwordResetToken: {
-    type: String,
-    default: null
-  },
-  passwordResetTokenExpires: {
-    type: Date,
-    default: null
-  },
-  role: {
-    type: String,
-    enum: ['user', 'admin'],
-    default: 'user'
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  hasSeenTour: {
-    type: Boolean,
-    default: false
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
-}, {
-  timestamps: true
+);
+
+// --- Indexes ---
+reportSchema.index({ status: 1, category: 1 });
+reportSchema.index({ severity: -1, createdAt: -1 });
+reportSchema.index({ location: '2dsphere' });
+
+// --- Virtuals ---
+reportSchema.virtual('coordinateArray').get(function () {
+  return this.location?.coordinates || [];
 });
 
-export default mongoose.model('User', userSchema);
+// --- Pre-save hook to track status changes in history ---
+reportSchema.pre('save', function (next) {
+  // Only run if document is not new
+  if (!this.isNew) {
+    // Check if status has changed
+    if (this.isModified('status')) {
+      this.history.push({
+        status: this.status,
+        notes: `Status changed to ${this.status}`,
+        updatedBy: this._updatingUser || null, // optional: set before save
+      });
+    }
+  } else {
+    // If new document, add initial status to history
+    this.history.push({
+      status: this.status,
+      notes: 'Report created',
+      updatedBy: this._updatingUser || null,
+    });
+  }
+  next();
+});
+
+// --- Pre-save hook to track status changes and rejectionReason ---
+reportSchema.pre('save', function (next) {
+  // Track the user performing the update
+  const updatedBy = this._updatingUser || null;
+
+  if (this.isNew) {
+    // New document: log initial status
+    this.history.push({
+      status: this.status,
+      notes: 'Report created',
+      updatedBy,
+    });
+
+    // If status is rejected at creation (rare), log rejectionReason
+    if (this.status === 'rejected' && this.rejectionReason) {
+      this.history.push({
+        status: 'rejected',
+        notes: `Rejection reason: ${this.rejectionReason}`,
+        updatedBy,
+      });
+    }
+  } else {
+    // Existing document: check for status change
+    if (this.isModified('status')) {
+      this.history.push({
+        status: this.status,
+        notes: `Status changed to ${this.status}`,
+        updatedBy,
+      });
+
+      // If status changed to rejected, log rejectionReason
+      if (this.status === 'rejected' && this.rejectionReason) {
+        this.history.push({
+          status: 'rejected',
+          notes: `Rejection reason: ${this.rejectionReason}`,
+          updatedBy,
+        });
+      }
+    }
+
+    // Optional: if rejectionReason changed without changing status
+    if (this.isModified('rejectionReason') && this.status === 'rejected') {
+      this.history.push({
+        status: 'rejected',
+        notes: `Rejection reason updated: ${this.rejectionReason}`,
+        updatedBy,
+      });
+    }
+  }
+
+  next();
+});
+
+
+// --- Optional method to set user performing update ---
+reportSchema.methods.setUpdatingUser = function (userId) {
+  this._updatingUser = userId;
+};
+
+export default mongoose.model('Report', reportSchema);
