@@ -21,16 +21,15 @@ const protect = async (req, res, next) => {
       next();
     } catch (error) {
       console.error(error);
-      res.status(401).json({ msg: 'Not authorized, token failed' });
+      return res.status(401).json({ msg: 'Not authorized, token failed' });
     }
   }
 
   if (!token) {
-    res.status(401).json({ msg: 'Not authorized, no token' });
+    return res.status(401).json({ msg: 'Not authorized, no token' });
   }
 };
 
-// ADD THIS NEW FUNCTION
 const admin = (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
     next();
@@ -39,4 +38,4 @@ const admin = (req, res, next) => {
   }
 };
 
-export { protect, admin }; // <-- UPDATE THIS LINE
+export { protect, admin };
