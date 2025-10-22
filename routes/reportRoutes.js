@@ -1,6 +1,6 @@
 import express from 'express';
-import mongoose from 'mongoose'; // <-- ADDED for ObjectId check
-import { protect } from '../middleware/authMiddleware.js';
+import mongoose from 'mongoose';
+import { protect, admin } from '../middleware/authMiddleware.js';
 import Report from '../models/Report.js';
 
 const router = express.Router();
@@ -20,14 +20,11 @@ router.post('/', protect, async (req, res) => {
       media: media || [],
       severity,
       user: req.user.id,
-      // status is defaulted by schema
-      // reportId is set by pre-save hook
     });
 
-    const createdReport = await report.save(); // This will trigger validation
+    const createdReport = await report.save();
     res.status(201).json(createdReport);
   } catch (error) {
-    // --- ADDED Validation Error Handling ---
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map((val) => val.message);
       return res.status(400).json({ msg: 'Validation failed', errors: messages });
@@ -43,7 +40,7 @@ router.post('/', protect, async (req, res) => {
 router.get('/mine', protect, async (req, res) => {
   try {
     const reports = await Report.find({ user: req.user.id })
-      .populate('user', 'name email') // <-- ADDED populate
+      .populate('user', 'name email')
       .sort({ createdAt: -1 });
     res.json(reports);
   } catch (error) {
@@ -52,16 +49,14 @@ router.get('/mine', protect, async (req, res) => {
   }
 });
 
-// ... (your existing POST / route) ...
-
 // @route   GET api/reports
 // @desc    Get all reports (public)
 // @access  Public
 router.get('/', async (req, res) => {
   try {
     const reports = await Report.find({})
-      .populate('user', 'name email') // Populate user details
-      .sort({ createdAt: -1 });      // Show newest first
+      .populate('user', 'name email')
+      .sort({ createdAt: -1 });
       
     res.json(reports);
   } catch (error) {
@@ -76,7 +71,6 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     let report;
-    // --- IMPROVED Robust ID Check ---
     if (mongoose.Types.ObjectId.isValid(req.params.id)) {
       report = await Report.findById(req.params.id).populate('user', 'name email');
     }
@@ -97,12 +91,11 @@ router.get('/:id', async (req, res) => {
 });
 
 // @route   PUT api/reports/:id
-// @desc    Update report by user
+// @desc    Update report (owner or admin)
 // @access  Private
 router.put('/:id', protect, async (req, res) => {
   try {
     let report;
-    // --- ADDED Consistent ID Check ---
     if (mongoose.Types.ObjectId.isValid(req.params.id)) {
       report = await Report.findById(req.params.id);
     }
@@ -112,9 +105,13 @@ router.put('/:id', protect, async (req, res) => {
 
     if (!report) return res.status(404).json({ msg: 'Report not found' });
 
-    // Check ownership
-    if (report.user.toString() !== req.user.id)
+    // Check authorization: Owner OR Admin can update
+    const isOwner = report.user && report.user.toString() === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
       return res.status(401).json({ msg: 'Not authorized' });
+    }
 
     const {
       title,
@@ -128,21 +125,19 @@ router.put('/:id', protect, async (req, res) => {
 
     // Update fields
     report.title = title || report.title;
-    report.description = description ?? report.description; // Allow setting empty string
+    report.description = description ?? report.description;
     report.department = department || report.department;
     report.location = location || report.location;
     report.media = media || report.media;
     report.severity = severity || report.severity;
     report.status = status || report.status;
 
-    const updatedReport = await report.save(); // This will trigger validation
+    const updatedReport = await report.save();
     
-    // Populate user data in the response
     await updatedReport.populate('user', 'name email');
     res.json(updatedReport);
     
   } catch (error) {
-    // --- ADDED Validation Error Handling ---
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map((val) => val.message);
       return res.status(400).json({ msg: 'Validation failed', errors: messages });
@@ -153,36 +148,34 @@ router.put('/:id', protect, async (req, res) => {
 });
 
 // @route   DELETE api/reports/:id
-// @desc    Delete a report
+// @desc    Delete a report (owner or admin)
 // @access  Private
 router.delete('/:id', protect, async (req, res) => {
   try {
     let report;
 
-    // Check if provided ID is a valid MongoDB ObjectId
     if (mongoose.Types.ObjectId.isValid(req.params.id)) {
       report = await Report.findById(req.params.id);
     }
 
-    // If not found by ObjectId, try with custom field (optional)
     if (!report) {
       report = await Report.findOne({ reportId: req.params.id });
     }
 
-    // Handle case when report does not exist
     if (!report) {
       return res.status(404).json({ msg: 'Report not found' });
     }
 
-    // Check if the report belongs to the logged-in user
-    if (report.user.toString() !== req.user.id) {
+    // Check authorization: Owner OR Admin can delete
+    const isOwner = report.user && report.user.toString() === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
       return res.status(401).json({ msg: 'Not authorized' });
     }
 
-    // Delete the report
     await report.deleteOne();
 
-    // Respond success
     res.json({ msg: 'Report deleted successfully' });
 
   } catch (error) {
@@ -193,6 +186,5 @@ router.delete('/:id', protect, async (req, res) => {
     });
   }
 });
-
 
 export default router;
