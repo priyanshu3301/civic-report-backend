@@ -24,6 +24,7 @@ router.post('/register', async (req, res) => {
       name,
       email,
       password,
+      provider: 'local', // <-- Set provider for local registration
     });
 
     // 3. Hash the password
@@ -31,6 +32,7 @@ router.post('/register', async (req, res) => {
     user.password = await bcrypt.hash(password, salt);
 
     // 4. Save the user to the database
+    // This will also trigger Mongoose schema validations
     await user.save();
 
     // 5. Create and return a JWT
@@ -46,10 +48,27 @@ router.post('/register', async (req, res) => {
       { expiresIn: '7d' },
       (err, token) => {
         if (err) throw err;
-        res.status(201).json({ token });
+        
+        // 6. Return token and user object
+        res.status(201).json({
+          token,
+          user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            isVerified: user.isVerified,
+            hasSeenTour: user.hasSeenTour,
+          },
+        });
       }
     );
   } catch (err) {
+    // 7. Handle Mongoose validation errors
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(val => val.message);
+      return res.status(400).json({ msg: 'Validation failed', errors: messages });
+    }
     console.error(err.message);
     res.status(500).send('Server error');
   }
