@@ -87,13 +87,28 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
 
-    // 2. Compare entered password with hashed password
+    // 2. Check if user registered with a password
+    if (user.provider !== 'local') {
+      return res.status(400).json({ 
+        msg: `You signed up with ${user.provider}. Please use that method to log in.` 
+      });
+    }
+
+    // 3. Compare entered password with hashed password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
 
-    // 3. Create and return a JWT
+    // 4. (Optional) Check if user is verified
+    // if (!user.isVerified) {
+    //   return res.status(401).json({ 
+    //     msg: 'Account not verified. Please check your email.',
+    //     requiresVerification: true 
+    //   });
+    // }
+    
+    // 5. Create and return a JWT
     const payload = {
       user: {
         id: user.id,
@@ -106,7 +121,19 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' },
       (err, token) => {
         if (err) throw err;
-        res.json({ token });
+        
+        // 6. Return token and user object
+        res.json({
+          token,
+          user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            isVerified: user.isVerified,
+            hasSeenTour: user.hasSeenTour,
+          },
+        });
       }
     );
   } catch (err) {
@@ -119,9 +146,19 @@ router.post('/login', async (req, res) => {
 // @desc    Get user profile
 // @access  Private
 router.get('/profile', protect, async (req, res) => {
-  // The user object is attached to the request in the 'protect' middleware
-  res.json(req.user); 
+  // req.user is attached by the 'protect' middleware and already has the password removed
+  res.json({
+    id: req.user._id,
+    name: req.user.name,
+    email: req.user.email,
+    role: req.user.role,
+    isVerified: req.user.isVerified,
+    hasSeenTour: req.user.hasSeenTour,
+    createdAt: req.user.createdAt,
+  });
 });
+
+// ... (your /admin-test route, etc.) ...
 
 // @route   GET api/users/admin-test
 // @desc    A test route for admin middleware
