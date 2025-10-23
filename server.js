@@ -64,21 +64,18 @@ app.use(
   })
 );
 
-// --- Security headers ---
+// --- Security headers --- 
+// Security headers
 app.use((req, res, next) => {
-res.header(
-  'Content-Security-Policy',
-  `default-src 'self' ${process.env.FRONTEND_URL || 'http://localhost:5173'}; ` +
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; " +
-  "style-src 'self' 'unsafe-inline'; " +
-  "img-src 'self' data: https:; " +
-  "font-src 'self'; " +
-  `connect-src 'self' ${process.env.FRONTEND_URL || 'http://localhost:5173'} https://www.google-analytics.com;`
-);
-
+  res.header('X-Content-Type-Options', 'nosniff');
+  res.header('X-Frame-Options', 'DENY');
+  res.header('X-XSS-Protection', '1; mode=block');
+  res.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://www.google-analytics.com https://analytics.google.com;");
+  res.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   next();
 });
-
 // --- Request timeout middleware ---
 app.use((req, res, next) => {
   const isUploadEndpoint = req.path.startsWith('/api/reports/upload');

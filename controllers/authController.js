@@ -190,7 +190,7 @@ export const VerifyOTP = async (req, res) => {
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
+      sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days (match tokenService expiry)
     });
 
@@ -361,7 +361,7 @@ export const login = async (req, res) => {
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
+      sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days (match tokenService expiry)
     });
 
@@ -445,7 +445,7 @@ export const logout = async (req, res) => {
     res.clearCookie('token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
+      sameSite: 'strict',
     });
 
     res.status(200).json({
@@ -566,7 +566,7 @@ export const VerifyOTPByURL = async (req, res) => {
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
+      sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days (match tokenService expiry)
     });
 
