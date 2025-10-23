@@ -1,5 +1,5 @@
 //(prevent abuse)
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 /**
  * General API rate limiter
@@ -40,7 +40,7 @@ export const authLimiter = rateLimit({
  */
 export const otpLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // Limit each IP to 3 OTP requests per hour
+  max: 3,
   message: {
     success: false,
     message: 'Too many OTP requests. Please try again after 1 hour',
@@ -49,10 +49,11 @@ export const otpLimiter = rateLimit({
   legacyHeaders: false,
   skipSuccessfulRequests: false,
   keyGenerator: (req) => {
-    // Rate limit by email instead of IP for OTP requests
-    return req.body.email || req.ip;
+    // Use email if present, otherwise use ipKeyGenerator for safe IPv6 handling
+    return req.body.email || ipKeyGenerator(req);
   },
 });
+
 
 /**
  * Password reset rate limiter

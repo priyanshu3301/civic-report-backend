@@ -22,7 +22,7 @@ const createTransporter = () => {
  * @returns {Promise<Object>} - Send result
  */
 const sendEmail = async (mailOptions) => {
-  const isTestMode = process.env.EMAIL_TEST_MODE === 'true';
+  const isTestMode = process.env.EMAIL_TEST_MODE;
 
   if (isTestMode) {
     console.log('\n📧 ===== EMAIL TEST MODE =====');
