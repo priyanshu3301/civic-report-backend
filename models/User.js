@@ -35,14 +35,43 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  verificationOTP: {
-    type: String,
-    default: null
-  },
-  verificationOTPExpires: {
+  // OTP fields
+verificationOTP: {
+  type: String,
+  default: null
+},
+verificationOTPExpires: {
+  type: Date,
+  default: null
+},
+otpAttempts: {
+  type: Number,
+  default: 0
+},
+otpLockedUntil: {
+  type: Date,
+  default: null
+},
+otpRequestCount: {  // Track OTP requests per hour
+  type: Number,
+  default: 0
+},
+otpRequestResetAt: {  // Reset counter after 1 hour
+  type: Date,
+  default: null
+},
+
+// Refresh token storage for revocation
+refreshTokens: [{
+  token: String,
+  createdAt: {
     type: Date,
-    default: null
+    default: Date.now
   },
+  expiresAt: Date
+}],
+
+// Password reset fields
   passwordResetOTP: {
     type: String,
     default: null
