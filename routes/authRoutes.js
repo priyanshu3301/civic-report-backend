@@ -31,8 +31,7 @@ const router = express.Router();
  * @desc    Register new user and send OTP
  * @access  Public
  */
-router.post(
-  '/register',
+router.post('/register',
   sanitizeInput,
   validateRegister,
   authLimiter,
@@ -45,8 +44,7 @@ router.post(
  * @desc    Verify OTP and activate account (auto-login)
  * @access  Public
  */
-router.post(
-  '/verify-otp',
+router.post('/verify-otp',
   sanitizeInput,
   validateOTP,
   otpVerificationLimiter,
@@ -58,8 +56,7 @@ router.post(
  * @desc    Resend OTP to email
  * @access  Public
  */
-router.post(
-  '/resend-otp',
+router.post('/resend-otp',
   sanitizeInput,
   validateEmail,
   otpLimiter,
@@ -72,8 +69,7 @@ router.post(
  * @desc    Login user
  * @access  Public
  */
-router.post(
-  '/login',
+router.post('/login',
   sanitizeInput,
   validateLogin,
   authLimiter,
@@ -92,8 +88,7 @@ router.get('/me', protect, getMe);
  * @desc    Refresh access token using refresh token
  * @access  Public (but requires valid refresh token)
  */
-router.post(
-  '/refresh-token',
+router.post('/refresh-token',
   sanitizeInput,
   validateRefreshToken,
   verifyRefreshToken,
