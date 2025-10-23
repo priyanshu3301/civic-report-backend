@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 
 /**
- * Generate Access Token (Short-lived)
+ * Generate Access Token (long-lived)
  * @param {string} userId - User ID
  * @param {string} email - User email
  * @param {string} role - User role (user/admin)
@@ -16,25 +16,10 @@ export const generateAccessToken = (userId, email, role) => {
   };
 
   return jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE || '15m',
+    expiresIn: process.env.JWT_EXPIRE || '7d',
   });
 };
 
-/**
- * Generate Refresh Token (Long-lived)
- * @param {string} userId - User ID
- * @returns {string} - JWT refresh token
- */
-export const generateRefreshToken = (userId) => {
-  const payload = {
-    id: userId,
-    type: 'refresh',
-  };
-
-  return jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_REFRESH_EXPIRE || '7d',
-  });
-};
 
 /**
  * Verify and decode JWT token

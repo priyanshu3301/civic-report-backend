@@ -11,8 +11,8 @@ export const protect = async (req, res, next) => {
     let token;
 
     // Check for token in Authorization header
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
+    if (req.cookies.token) {
+        token = req.cookies.token;
     }
 
     if (!token) {
@@ -128,71 +128,4 @@ export const restrictTo = (...roles) => {
 
     next();
   };
-};
-
-/**
- * Verify refresh token
- * Used for token refresh endpoint
- */
-export const verifyRefreshToken = async (req, res, next) => {
-  try {
-    const { refreshToken } = req.body;
-
-    if (!refreshToken) {
-      return res.status(400).json({
-        success: false,
-        message: 'Refresh token is required.',
-      });
-    }
-
-    // Verify token signature and type
-    const decoded = verifyToken(refreshToken, 'refresh');
-
-    // Get user and check if refresh token exists in database
-    const user = await User.findById(decoded.id).select('-password');
-
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not found.',
-      });
-    }
-
-    // Check if user is active
-    if (!user.isActive) {
-      return res.status(403).json({
-        success: false,
-        message: 'Account is deactivated.',
-      });
-    }
-
-    // Check if refresh token exists in user's token list
-    const tokenExists = user.refreshTokens.some(
-      (t) => t.token === refreshToken && new Date() < new Date(t.expiresAt)
-    );
-
-    if (!tokenExists) {
-      return res.status(401).json({
-        success: false,
-        message: 'Refresh token is invalid or has been revoked.',
-      });
-    }
-
-    // Attach user to request
-    req.user = user;
-    req.refreshToken = refreshToken;
-    next();
-  } catch (error) {
-    if (error.message === 'Token has expired') {
-      return res.status(401).json({
-        success: false,
-        message: 'Refresh token has expired. Please login again.',
-      });
-    }
-
-    return res.status(401).json({
-      success: false,
-      message: 'Invalid refresh token.',
-    });
-  }
 };

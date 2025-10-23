@@ -5,7 +5,6 @@ import {
   resendOTP,
   login,
   getMe,
-  refreshAccessToken,
   logout,
 } from '../controllers/authController.js';
 import {
@@ -13,7 +12,6 @@ import {
   validateLogin,
   validateOTP,
   validateEmail,
-  validateRefreshToken,
   sanitizeInput,
 } from '../middleware/validation.js';
 import {
@@ -22,7 +20,7 @@ import {
   otpVerificationLimiter,
   checkOTPAttempts,
 } from '../middleware/rateLimiter.js';
-import { protect, verifyRefreshToken } from '../middleware/auth.js';
+import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -83,17 +81,6 @@ router.post('/login',
  */
 router.get('/me', protect, getMe);
 
-/**
- * @route   POST /api/auth/refresh-token
- * @desc    Refresh access token using refresh token
- * @access  Public (but requires valid refresh token)
- */
-router.post('/refresh-token',
-  sanitizeInput,
-  validateRefreshToken,
-  verifyRefreshToken,
-  refreshAccessToken
-);
 
 /**
  * @route   POST /api/auth/logout

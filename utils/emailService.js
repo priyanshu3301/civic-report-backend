@@ -20,16 +20,16 @@ const createTransporter = () => {
  * @returns {Promise<Object>} - Send result
  */
 const sendEmail = async (mailOptions) => {
-//   const isTestMode = process.env.EMAIL_TEST_MODE;
+  const isTestMode = process.env.EMAIL_TEST_MODE;
 
-//   if (isTestMode) {
-//     console.log('\n📧 ===== EMAIL TEST MODE =====');
-//     console.log('To:', mailOptions.to);
-//     console.log('Subject:', mailOptions.subject);
-//     console.log('Content:', mailOptions.text || 'HTML content (check html field)');
-//     console.log('============================\n');
-//     return { messageId: 'test-mode-' + Date.now() };
-//   }
+  if (isTestMode) {
+    console.log('\n📧 ===== EMAIL TEST MODE =====');
+    console.log('To:', mailOptions.to);
+    console.log('Subject:', mailOptions.subject);
+    console.log('Content:', mailOptions.text || 'HTML content (check html field)');
+    console.log('============================\n');
+    return { messageId: 'test-mode-' + Date.now() };
+  }
 
   const transporter = createTransporter();
   return await transporter.sendMail(mailOptions);

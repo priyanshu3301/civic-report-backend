@@ -4,6 +4,7 @@ import cors from 'cors';
 import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import { generalLimiter } from './middleware/rateLimiter.js';
+import cookieParser from 'cookie-parser';
 
 // Load environment variables
 dotenv.config();
@@ -53,6 +54,8 @@ app.use(
     },
   })
 );
+
+app.use(cookieParser());
 app.use(
   express.urlencoded({
     extended: true,
@@ -63,16 +66,16 @@ app.use(
 
 // --- Security headers ---
 app.use((req, res, next) => {
-  res.header('X-Content-Type-Options', 'nosniff');
-  res.header('X-Frame-Options', 'DENY');
-  res.header('X-XSS-Protection', '1; mode=block');
-  res.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  res.header(
-    'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://www.google-analytics.com https://analytics.google.com;"
-  );
-  res.header('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+res.header(
+  'Content-Security-Policy',
+  `default-src 'self' ${process.env.FRONTEND_URL || 'http://localhost:5173'}; ` +
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; " +
+  "style-src 'self' 'unsafe-inline'; " +
+  "img-src 'self' data: https:; " +
+  "font-src 'self'; " +
+  `connect-src 'self' ${process.env.FRONTEND_URL || 'http://localhost:5173'} https://www.google-analytics.com;`
+);
+
   next();
 });
 
