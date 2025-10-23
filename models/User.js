@@ -35,19 +35,19 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  verificationToken: {
+  verificationOTP: {
     type: String,
     default: null
   },
-  verificationTokenExpires: {
+  verificationOTPExpires: {
     type: Date,
     default: null
   },
-  passwordResetToken: {
+  passwordResetOTP: {
     type: String,
     default: null
   },
-  passwordResetTokenExpires: {
+  passwordResetOTPExpires: {
     type: Date,
     default: null
   },
