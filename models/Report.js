@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+
 // --- Constants for reuse ---
 const STATUS_ENUM = ["reported", "acknowledged", "in_progress", "resolved", "closed", "rejected"];
 const CATEGORY_ENUM = [
@@ -12,6 +13,26 @@ const CATEGORY_ENUM = [
 ];
 const MEDIA_TYPE_ENUM = ['image', 'video', 'audio'];
 const SEVERITY_ENUM = ['low', 'medium', 'high', 'critical'];
+
+// Add this before reportSchema
+const mediaSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: MEDIA_TYPE_ENUM,
+    required: true,
+  },
+  url: {
+    type: String,
+    required: true,
+  },
+  thumbnail: { // <-- THE FIX FOR THE THUMBNAIL BUG
+    type: String,
+  },
+}, {
+  id: false, // <-- OPTIONAL: This removes the virtual 'id' field
+  _id: true  // This ensures the subdocument still gets a unique _id
+});
+
 
 const reportSchema = new mongoose.Schema(
   {
@@ -70,17 +91,7 @@ const reportSchema = new mongoose.Schema(
       },
     },
     media: [
-      {
-        type: {
-          type: String,
-          enum: MEDIA_TYPE_ENUM,
-          required: true,
-        },
-        url: {
-          type: String,
-          required: true,
-        },
-      },
+      mediaSchema,
     ],
     severity: {
       type: String,

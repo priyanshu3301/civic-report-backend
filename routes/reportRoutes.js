@@ -53,7 +53,7 @@ router.get('/nearby', protect, getNearbyReports);
  * @desc    Get specific report by ID
  * @access  Private
  */
-router.get('/:reportId', protect, getReportById);
+router.get('/:reportId', getReportById);
 
 /**
  * @route   PATCH /api/reports/:reportId/upvote

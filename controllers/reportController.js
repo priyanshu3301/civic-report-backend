@@ -301,16 +301,16 @@ export const upvoteReport = async (req, res) => {
     if (newSeverity !== report.severity) {
       report.severity = newSeverity;
       
-      // Add history entry for severity upgrade
-      report.setUpdatingUser(userId);
+      // Add history entry for severity upgrade (DO NOT use setUpdatingUser here)
       report.history.push({
         status: report.status,
         notes: `Severity upgraded to ${newSeverity} due to ${report.upvotes} upvotes`,
-        updatedBy: userId,
+        updatedBy: null, // System update, not a specific user
         timestamp: new Date(),
       });
     }
 
+    // Save without triggering setUpdatingUser
     await report.save();
 
     res.status(200).json({
