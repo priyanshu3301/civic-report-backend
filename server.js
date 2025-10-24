@@ -1,10 +1,12 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
+import reportRoutes from './routes/reportRoutes.js';
 import { generalLimiter } from './middleware/rateLimiter.js';
-import cookieParser from 'cookie-parser';
+import { testCloudinaryConnection } from './config/cloudinary.js';
 
 // Load environment variables
 dotenv.config();
@@ -12,7 +14,10 @@ dotenv.config();
 // Validate required environment variables
 const requiredEnvVars = [
   'JWT_SECRET',
-  'MONGO_URI'
+  'MONGO_URI',
+  'CLOUDINARY_CLOUD_NAME',
+  'CLOUDINARY_API_KEY',
+  'CLOUDINARY_API_SECRET',
 ];
 const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
@@ -54,8 +59,6 @@ app.use(
     },
   })
 );
-
-app.use(cookieParser());
 app.use(
   express.urlencoded({
     extended: true,
@@ -63,19 +66,23 @@ app.use(
     parameterLimit: 1000,
   })
 );
+app.use(cookieParser());
 
-// --- Security headers --- 
-// Security headers
+// --- Security headers ---
 app.use((req, res, next) => {
   res.header('X-Content-Type-Options', 'nosniff');
   res.header('X-Frame-Options', 'DENY');
   res.header('X-XSS-Protection', '1; mode=block');
   res.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  res.header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://www.google-analytics.com https://analytics.google.com;");
+  res.header(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://www.google-analytics.com https://analytics.google.com;"
+  );
   res.header('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   next();
 });
+
 // --- Request timeout middleware ---
 app.use((req, res, next) => {
   const isUploadEndpoint = req.path.startsWith('/api/reports/upload');
@@ -100,6 +107,7 @@ app.get('/health', (req, res) => {
 
 // --- API Routes ---
 app.use('/api/auth', authRoutes);
+app.use('/api/reports', reportRoutes);
 
 // --- 404 Handler ---
 app.use((req, res) => {
@@ -171,3 +179,6 @@ const PORT = process.env.PORT || 5000;
     process.exit(1);
   }
 })();
+
+// Test Cloudinary connection
+testCloudinaryConnection();

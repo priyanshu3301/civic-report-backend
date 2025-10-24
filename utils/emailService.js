@@ -20,7 +20,7 @@ const createTransporter = () => {
  * @returns {Promise<Object>} - Send result
  */
 const sendEmail = async (mailOptions) => {
-  const isTestMode = process.env.EMAIL_TEST_MODE;
+  const isTestMode = process.env.EMAIL_TEST_MODE === 'true';
 
   if (isTestMode) {
     console.log('\n📧 ===== EMAIL TEST MODE =====');
@@ -61,7 +61,7 @@ export const sendOTPEmail = async (email, name, otp) => {
             .header h1 { color: white; margin: 0; font-size: 24px; }
             .content { background: #f9f9f9; padding: 40px 30px; border-radius: 0 0 10px 10px; }
             .otp-box { background: white; border: 2px dashed #667eea; border-radius: 10px; padding: 30px; text-align: center; margin: 30px 0; }
-            .otp { font-size: 48px; font-weight: bold; color: #667eea; letter-spacing: 8px; margin: 0; }
+            .otp { font-size: 36px; font-weight: bold; color: #667eea; letter-spacing: 8px; margin: 0; }
             .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
             .footer { text-align: center; margin-top: 30px; color: #888; font-size: 12px; }
           </style>
@@ -78,6 +78,11 @@ export const sendOTPEmail = async (email, name, otp) => {
               <div class="otp-box">
                 <p style="margin: 0; font-size: 14px; color: #666;">Your Verification Code</p>
                 <p class="otp">${otp}</p>
+              </div>
+
+              <div class="alternative-link">
+                <p>If the OTP above does not work, please use the following link to verify your email:</p>
+                <p><a href="${process.env.FRONTEND_URL}/api/auth/verify-otp/${encodeURIComponent(email)}/${otp}">Verify My Email</a></p>
               </div>
 
               <div class="warning">

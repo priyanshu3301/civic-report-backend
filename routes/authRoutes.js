@@ -6,6 +6,7 @@ import {
   login,
   getMe,
   logout,
+  VerifyOTPByURL,
 } from '../controllers/authController.js';
 import {
   validateRegister,
@@ -50,6 +51,16 @@ router.post('/verify-otp',
 );
 
 /**
+ * @route   POST /api/auth/verify-otp
+ * @desc    Verify OTP and activate account (auto-login)
+ * @access  Public
+ */
+router.get('/verify-otp/:id/:token',
+  sanitizeInput,
+  VerifyOTPByURL
+);
+
+/**
  * @route   POST /api/auth/resend-otp
  * @desc    Resend OTP to email
  * @access  Public
@@ -87,6 +98,6 @@ router.get('/me', protect, getMe);
  * @desc    Logout user (revoke refresh token)
  * @access  Private
  */
-router.post('/logout', protect, logout);
+router.get('/logout', logout);
 
 export default router;

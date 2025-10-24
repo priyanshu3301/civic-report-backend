@@ -469,7 +469,8 @@ export const logout = async (req, res) => {
  */
 export const VerifyOTPByURL = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const email = decodeURIComponent(req.params.id);
+    const otp = req.params.token;
 
     // Find user
     const user = await User.findOne({ email: email.toLowerCase() });
@@ -570,22 +571,25 @@ export const VerifyOTPByURL = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days (match tokenService expiry)
     });
 
-    // --- MODIFIED RESPONSE (NO TOKENS IN BODY) ---
-    res.status(200).json({
-      success: true,
-      message: 'Email verified successfully! You are now logged in.',
-      data: {
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          isVerified: user.isVerified,
-        },
-        // accessToken, // Removed
-        // refreshToken, // Removed
-      },
-    });
+    // --- SET LOCATION HEADER FOR REDIRECT ---
+    res.setHeader('Location', process.env.FRONTEND_URL || 'http://localhost:5000');
+    res.status(302);
+    // // --- MODIFIED RESPONSE (NO TOKENS IN BODY) ---
+    // res.status(302).json({
+    //   success: true,
+    //   message: 'Email verified successfully! You are now logged in.',
+    //   data: {
+    //     user: {
+    //       id: user._id,
+    //       name: user.name,
+    //       email: user.email,
+    //       role: user.role,
+    //       isVerified: user.isVerified,
+    //     },
+    //     // accessToken, // Removed
+    //     // refreshToken, // Removed
+    //   },
+    // });
   } catch (error) {
     console.error('Verify OTP error:', error);
     res.status(500).json({
