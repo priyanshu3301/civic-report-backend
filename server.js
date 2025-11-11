@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
+import adminRoutes from './routes/adminRoutes.js'; // NEW: Admin routes
 import { generalLimiter } from './middleware/rateLimiter.js';
 import { testCloudinaryConnection } from './config/cloudinary.js';
 
@@ -108,6 +109,7 @@ app.get('/health', (req, res) => {
 // --- API Routes ---
 app.use('/api/auth', authRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/admin', adminRoutes); // NEW: Admin routes
 
 // --- 404 Handler ---
 app.use((req, res) => {
@@ -171,7 +173,7 @@ const PORT = process.env.PORT || 5000;
     await connectDB();
     app.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
-      console.log(`📧 Email test mode: ${process.env.EMAIL_TEST_MODE === 'true' ? 'ENABLED' : 'DISABLED'}`);
+      console.log(`🔧 Email test mode: ${process.env.EMAIL_TEST_MODE === 'true' ? 'ENABLED' : 'DISABLED'}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (err) {
