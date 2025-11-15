@@ -179,6 +179,7 @@ reportSchema.pre('save', function (next) {
       updatedBy,
     });
 
+    // If created as rejected (rare case), add rejection reason
     if (this.status === 'rejected' && this.rejectionReason) {
       this.history.push({
         status: 'rejected',
@@ -189,29 +190,19 @@ reportSchema.pre('save', function (next) {
   } else {
     // Status change tracking
     if (this.isModified('status')) {
+      // Add ONE entry for status change
+      const notes = this.status === 'rejected' && this.rejectionReason
+        ? `Rejected: ${this.rejectionReason}`  // Include reason in status change note
+        : `Status changed to ${this.status}`;
+      
       this.history.push({
         status: this.status,
-        notes: `Status changed to ${this.status}`,
+        notes,
         updatedBy,
       });
-
-      if (this.status === 'rejected' && this.rejectionReason) {
-        this.history.push({
-          status: 'rejected',
-          notes: `Rejection reason: ${this.rejectionReason}`,
-          updatedBy,
-        });
-      }
-    }
-
-    // Rejection reason updated independently
-    if (this.isModified('rejectionReason') && this.status === 'rejected') {
-      this.history.push({
-        status: 'rejected',
-        notes: `Rejection reason updated: ${this.rejectionReason}`,
-        updatedBy,
-      });
-    }
+    } 
+    // REMOVED: Separate rejectionReason tracking to avoid duplicates
+    // The rejection reason is now included in the status change note above
   }
 
   next();

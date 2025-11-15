@@ -903,3 +903,541 @@ You now have a complete report system with:
 - Notifications
 
 Let me know when you're ready for the next feature! 🚀
+
+
+# Admin Dashboard API Documentation
+
+## Overview
+Complete admin dashboard functionality for managing reports and users in the Civic Report System.
+
+## Authentication
+All admin endpoints require:
+- Valid JWT token in cookies (`token`)
+- User role must be `admin`
+
+**Headers:**
+```
+Cookie: token=<your_jwt_token>
+```
+
+---
+
+## 📊 Dashboard Statistics
+
+### Get Dashboard Stats
+Get comprehensive statistics for the admin dashboard.
+
+**Endpoint:** `GET /api/admin/dashboard/stats`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "reports": {
+      "totalReports": 150,
+      "reported": 45,
+      "acknowledged": 30,
+      "inProgress": 25,
+      "resolved": 40,
+      "closed": 8,
+      "rejected": 2,
+      "totalUpvotes": 320,
+      "avgUpvotes": 2.13
+    },
+    "categories": [
+      { "_id": "sanitation", "count": 60 },
+      { "_id": "public_works", "count": 45 }
+    ],
+    "severity": [
+      { "_id": "high", "count": 50 },
+      { "_id": "medium", "count": 70 }
+    ],
+    "users": {
+      "totalUsers": 500,
+      "activeUsers": 480,
+      "verifiedUsers": 450,
+      "admins": 5
+    },
+    "recentActivity": {
+      "last7Days": 35,
+      "today": 8
+    }
+  }
+}
+```
+
+---
+
+## 📋 Report Management
+
+### 1. Get All Reports (with filters)
+
+**Endpoint:** `GET /api/admin/reports`
+
+**Query Parameters:**
+- `page` (default: 1) - Page number
+- `limit` (default: 20) - Results per page
+- `status` - Filter by status (reported, acknowledged, in_progress, resolved, closed, rejected)
+- `category` - Filter by category (sanitation, public_works, etc.)
+- `severity` - Filter by severity (low, medium, high, critical)
+- `userId` - Filter by user ID
+- `search` - Search in title and description
+- `startDate` - Filter reports from this date (ISO format)
+- `endDate` - Filter reports until this date (ISO format)
+- `sortBy` (default: createdAt) - Sort field
+- `order` (default: desc) - Sort order (asc/desc)
+
+**Example Request:**
+```bash
+GET /api/admin/reports?page=1&limit=20&status=reported&category=sanitation&search=garbage
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "reports": [
+      {
+        "_id": "report123",
+        "title": "Garbage pile on Main Street",
+        "description": "Large pile of garbage blocking sidewalk",
+        "status": "reported",
+        "category": "sanitation",
+        "severity": "high",
+        "upvotes": 15,
+        "user": {
+          "_id": "user123",
+          "name": "John Doe",
+          "email": "john@example.com"
+        },
+        "location": {
+          "name": "Main Street, Downtown",
+          "coordinates": [77.2090, 28.6139]
+        },
+        "media": [...],
+        "createdAt": "2024-01-15T10:30:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 50,
+      "pages": 3
+    },
+    "stats": {
+      "totalReports": 50,
+      "reported": 20,
+      "acknowledged": 15,
+      "avgUpvotes": 3.5
+    }
+  }
+}
+```
+
+### 2. Get Report Details (with full history)
+
+**Endpoint:** `GET /api/admin/reports/:reportId`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "report": {
+      "_id": "report123",
+      "title": "Garbage pile on Main Street",
+      "description": "...",
+      "status": "in_progress",
+      "history": [
+        {
+          "status": "reported",
+          "notes": "Report created",
+          "updatedBy": null,
+          "timestamp": "2024-01-15T10:30:00Z"
+        },
+        {
+          "status": "acknowledged",
+          "notes": "We are looking into this issue",
+          "updatedBy": {
+            "name": "Admin User",
+            "email": "admin@example.com",
+            "role": "admin"
+          },
+          "timestamp": "2024-01-15T11:00:00Z"
+        }
+      ],
+      "upvotedBy": [...],
+      "user": {...}
+    }
+  }
+}
+```
+
+### 3. Update Report Status
+
+**Endpoint:** `PATCH /api/admin/reports/:reportId/status`
+
+**Request Body:**
+```json
+{
+  "status": "acknowledged",
+  "notes": "We have received your report and will investigate shortly"
+}
+```
+
+**Valid Statuses:**
+- `reported` - Initial status
+- `acknowledged` - Admin has seen the report
+- `in_progress` - Work has started
+- `resolved` - Issue has been fixed
+- `closed` - Report closed (no further action)
+- `rejected` - Report rejected (use reject endpoint for this)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Report status updated to acknowledged",
+  "data": {
+    "report": {
+      "_id": "report123",
+      "title": "Garbage pile on Main Street",
+      "status": "acknowledged",
+      "updatedAt": "2024-01-15T11:00:00Z",
+      "history": [...]
+    }
+  }
+}
+```
+
+### 4. Reject Report
+
+**Endpoint:** `PATCH /api/admin/reports/:reportId/reject`
+
+**Request Body:**
+```json
+{
+  "reason": "This report does not contain sufficient information to proceed. Please provide the exact location and add photos."
+}
+```
+
+**Validation:**
+- Reason must be at least 10 characters
+- Reason cannot exceed 500 characters
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Report rejected successfully",
+  "data": {
+    "report": {
+      "_id": "report123",
+      "status": "rejected",
+      "rejectionReason": "This report does not contain...",
+      "updatedAt": "2024-01-15T11:00:00Z"
+    }
+  }
+}
+```
+
+---
+
+## 👥 User Management
+
+### 1. Get All Users (with filters)
+
+**Endpoint:** `GET /api/admin/users`
+
+**Query Parameters:**
+- `page` (default: 1) - Page number
+- `limit` (default: 20) - Results per page
+- `role` - Filter by role (user/admin)
+- `isActive` - Filter by active status (true/false)
+- `isVerified` - Filter by verification status (true/false)
+- `search` - Search in name and email
+- `sortBy` (default: createdAt) - Sort field
+- `order` (default: desc) - Sort order (asc/desc)
+
+**Example Request:**
+```bash
+GET /api/admin/users?page=1&limit=20&isActive=true&search=john
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "users": [
+      {
+        "_id": "user123",
+        "name": "John Doe",
+        "email": "john@example.com",
+        "role": "user",
+        "isActive": true,
+        "isVerified": true,
+        "reportCount": 5,
+        "createdAt": "2024-01-10T08:00:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 500,
+      "pages": 25
+    },
+    "stats": {
+      "totalUsers": 500,
+      "activeUsers": 480,
+      "verifiedUsers": 450,
+      "admins": 5,
+      "regularUsers": 495
+    }
+  }
+}
+```
+
+### 2. Update User Status (Activate/Deactivate)
+
+**Endpoint:** `PATCH /api/admin/users/:userId/status`
+
+**Request Body:**
+```json
+{
+  "isActive": false
+}
+```
+
+**Note:** Admins cannot change their own status.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "User deactivated successfully",
+  "data": {
+    "user": {
+      "_id": "user123",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "user",
+      "isActive": false,
+      "isVerified": true
+    }
+  }
+}
+```
+
+### 3. Update User Role
+
+**Endpoint:** `PATCH /api/admin/users/:userId/role`
+
+**Request Body:**
+```json
+{
+  "role": "admin"
+}
+```
+
+**Valid Roles:** `user`, `admin`
+
+**Note:** Admins cannot change their own role.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "User role updated to admin successfully",
+  "data": {
+    "user": {
+      "_id": "user123",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "admin",
+      "isActive": true,
+      "isVerified": true
+    }
+  }
+}
+```
+
+### 4. Delete User
+
+**Endpoint:** `DELETE /api/admin/users/:userId`
+
+**Note:** 
+- Admins cannot delete themselves
+- User's reports will be set to anonymous (user field becomes null)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "User deleted successfully",
+  "data": {
+    "deletedUserId": "user123"
+  }
+}
+```
+
+---
+
+## 🧪 Testing with Postman/Thunder Client
+
+### 1. Setup Environment Variables
+```
+BASE_URL = http://localhost:5000
+ADMIN_TOKEN = <your_admin_jwt_token>
+```
+
+### 2. Login as Admin
+First, create an admin user or change an existing user's role in the database:
+
+```javascript
+// In MongoDB shell or Compass
+db.users.updateOne(
+  { email: "admin@example.com" },
+  { $set: { role: "admin" } }
+)
+```
+
+Then login:
+```bash
+POST {{BASE_URL}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "your_password"
+}
+```
+
+The token will be set in cookies automatically.
+
+### 3. Test Admin Endpoints
+
+**Get Dashboard Stats:**
+```bash
+GET {{BASE_URL}}/api/admin/dashboard/stats
+```
+
+**Get All Reports:**
+```bash
+GET {{BASE_URL}}/api/admin/reports?status=reported&page=1&limit=10
+```
+
+**Update Report Status:**
+```bash
+PATCH {{BASE_URL}}/api/admin/reports/{{reportId}}/status
+Content-Type: application/json
+
+{
+  "status": "acknowledged",
+  "notes": "We will investigate this issue"
+}
+```
+
+**Reject Report:**
+```bash
+PATCH {{BASE_URL}}/api/admin/reports/{{reportId}}/reject
+Content-Type: application/json
+
+{
+  "reason": "This report lacks sufficient detail and location information"
+}
+```
+
+**Get All Users:**
+```bash
+GET {{BASE_URL}}/api/admin/users?isActive=true&page=1&limit=20
+```
+
+**Deactivate User:**
+```bash
+PATCH {{BASE_URL}}/api/admin/users/{{userId}}/status
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+```
+
+---
+
+## 🔒 Security Features
+
+1. **Role-Based Access Control**: All endpoints protected by `restrictTo('admin')` middleware
+2. **Self-Protection**: Admins cannot modify their own status or role
+3. **Input Validation**: All inputs validated before processing
+4. **XSS Prevention**: Script tags removed from text inputs
+5. **Rate Limiting**: General rate limiter applied to all API routes
+
+---
+
+## 📝 Error Responses
+
+### 401 Unauthorized
+```json
+{
+  "success": false,
+  "message": "Not authorized. No token provided."
+}
+```
+
+### 403 Forbidden
+```json
+{
+  "success": false,
+  "message": "Access denied. This route is restricted to: admin"
+}
+```
+
+### 404 Not Found
+```json
+{
+  "success": false,
+  "message": "Report not found"
+}
+```
+
+### 400 Bad Request
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "errors": [
+    "Status is required",
+    "Notes cannot exceed 500 characters"
+  ]
+}
+```
+
+---
+
+## 📁 File Structure
+
+```
+controllers/
+  └── adminController.js      # All admin logic
+
+routes/
+  └── adminRoutes.js           # Admin route definitions
+
+middleware/
+  └── adminValidation.js       # Admin input validation
+  └── auth.js                  # Authentication & authorization
+```
+
+---
+
+## 🎯 Next Steps
+
+After implementing admin features, consider adding:
+1. Email notifications when report status changes
+2. Activity logs for admin actions
+3. Bulk operations (update multiple reports)
+4. Export data (CSV, PDF reports)
+5. Advanced analytics and charts

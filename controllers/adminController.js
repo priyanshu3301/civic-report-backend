@@ -130,7 +130,7 @@ export const getAllReports = async (req, res) => {
 };
 
 /**
- * @desc    Update report status (Admin only)
+ * @desc    Update report status (Admin only) - FIXED: No duplicate history entries
  * @route   PATCH /api/admin/reports/:reportId/status
  * @access  Private/Admin
  */
@@ -178,15 +178,8 @@ export const updateReportStatus = async (req, res) => {
     report.status = status;
     report.setUpdatingUser(adminId);
 
-    // Add notes if provided
-    if (notes) {
-      report.history.push({
-        status,
-        notes: notes.trim(),
-        updatedBy: adminId,
-        timestamp: new Date(),
-      });
-    }
+    // DON'T manually add to history - let the pre-save hook handle it
+    // The pre-save hook will automatically create the history entry
 
     await report.save();
 
@@ -220,7 +213,7 @@ export const updateReportStatus = async (req, res) => {
 };
 
 /**
- * @desc    Reject report with reason (Admin only)
+ * @desc    Reject report with reason (Admin only) - FIXED: No duplicate history entries
  * @route   PATCH /api/admin/reports/:reportId/reject
  * @access  Private/Admin
  */
@@ -270,11 +263,13 @@ export const rejectReport = async (req, res) => {
       });
     }
 
-    // Update to rejected status
+    // IMPORTANT: Set BOTH status and rejectionReason BEFORE saving
+    // This way, pre-save hook sees both changes at once and creates proper history
     report.status = 'rejected';
     report.rejectionReason = reason.trim();
     report.setUpdatingUser(adminId);
 
+    // Save once - pre-save hook will handle history
     await report.save();
 
     // Populate the history for response
